@@ -201,9 +201,10 @@ end
 function _inrange(tree::KDTree,
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball = Int[])
+                  idx_in_ball = Int[],
+                  dist_in_ball = Float64[])
     init_min = get_min_distance(tree.hyper_rec, point)
-    inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
+    inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball, dist_in_ball,
                    init_min)
     return
 end
@@ -214,6 +215,7 @@ function inrange_kernel!(tree::KDTree,
                          point::AbstractVector,
                          r::Number,
                          idx_in_ball::Vector{Int},
+                         dist_in_ball::Vector{Float64},
                          min_dist)
     @NODE 1
     # Point is outside hyper rectangle, skip the whole sub tree
@@ -223,7 +225,7 @@ function inrange_kernel!(tree::KDTree,
 
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        add_points_inrange!(idx_in_ball, tree, index, point, r, false)
+        add_points_inrange!(idx_in_ball, dist_in_ball, tree, index, point, r, false)
         return
     end
 
@@ -245,7 +247,7 @@ function inrange_kernel!(tree::KDTree,
         ddiff = max(zero(lo - p_dim), lo - p_dim)
     end
     # Call closer sub tree
-    inrange_kernel!(tree, close, point, r, idx_in_ball, min_dist)
+    inrange_kernel!(tree, close, point, r, idx_in_ball, dist_in_ball, min_dist)
 
     # TODO: We could potentially also keep track of the max distance
     # between the point and the hyper rectangle and add the whole sub tree
@@ -257,5 +259,5 @@ function inrange_kernel!(tree::KDTree,
     ddiff_pow = eval_pow(M, ddiff)
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
     new_min = eval_reduce(M, min_dist, diff_tot)
-    inrange_kernel!(tree, far, point, r, idx_in_ball, new_min)
+    inrange_kernel!(tree, far, point, r, idx_in_ball, dist_in_ball, new_min)
 end

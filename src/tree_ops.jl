@@ -1,3 +1,4 @@
+using LinearAlgebra
 # Helper functions to get node numbers and points
 @inline getleft(i::Int) = 2i
 @inline getright(i::Int) = 2i + 1
@@ -115,14 +116,18 @@ end
 # stop computing the distance function as soon as we reach the desired radius.
 # This will probably prevent SIMD and other optimizations so some care is needed
 # to evaluate if it is worth it.
-@inline function add_points_inrange!(idx_in_ball::Vector{Int}, tree::NNTree,
+@inline function add_points_inrange!(idx_in_ball::Vector{Int}, 
+                                     dist_in_ball::Vector{Float64},
+                                     tree::NNTree,
                                      index::Int, point::AbstractVector, r::Number, do_end::Bool)
     for z in get_leaf_range(tree.tree_data, index)
         @POINT 1
         idx = tree.reordered ? z : tree.indices[z]
-        dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
+        #dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
+        dist_d = norm(tree.data[idx] - point)
         if dist_d <= r
             push!(idx_in_ball, idx)
+            push!(dist_in_ball, dist_d)
         end
     end
 end
